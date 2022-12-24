@@ -15,6 +15,11 @@ from pipelines import pipeline
 
 app = Flask(__name__)
 
+@app.route("/info")
+def inde():
+   user_agent = request.headers.get('User-Agent')
+   return jsonify({"user_agent":user_agent,"ip":request.remote_addr})
+
 #passing a variable in the url
 @app.route("/<name>")
 def index(name):
