@@ -10,10 +10,22 @@ from transformers import T5ForConditionalGeneration,T5Tokenizer
 import pandas as pd
 from openpyxl import load_workbook
 from pipelines import pipeline
-
+import threading
 
 
 app = Flask(__name__)
+def abc():
+    data ={
+        "message": "Hello World!, from abc",
+        "name": "abc"
+    }
+    return data
+
+
+@app.route("/")
+def home():
+  
+    return jsonify(threading.Thread(target=abc).start())
 
 @app.route("/info")
 def inde():
@@ -62,4 +74,4 @@ def generate_qna():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="192.168.1.3")
