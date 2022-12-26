@@ -1,4 +1,5 @@
 from flask import Flask,jsonify,request,redirect, url_for
+from flask_restful import Resource,Api,reqparse
 import time
 import warnings
 import docx
@@ -6,26 +7,29 @@ import csv
 import docx2txt
 import openpyxl
 import torch
-from transformers import T5ForConditionalGeneration,T5Tokenizer
 import pandas as pd
 from openpyxl import load_workbook
-from pipelines import pipeline
 import threading
 
-
+project_name = ""
+guid= ""
 app = Flask(__name__)
-def abc():
-    data ={
-        "message": "Hello World!, from abc",
-        "name": "abc"
-    }
-    return data
+api = Api(app)
 
+parser = reqparse.RequestParser()
+parser.add_argument("project_name" , type=str , required=True , help="enter project name")
+parser.add_argument("guid" , type=str , required=True , help="enter guid")
 
-@app.route("/")
-def home():
-  
-    return jsonify(threading.Thread(target=abc).start())
+class get_guid_project(Resource):
+    def __init__(self):
+        self.__project_name = parser.parse_args().get('project_name',None)
+        self.__guid = parser.parse_args().get('guid',None)
+    def get(self): 
+        project_name = self.__project_name
+        guid = self.__guid
+        return {"project_name":project_name,"guid":guid}
+
+api.add_resource(get_guid_project,"/get_name_id/")
 
 @app.route("/info")
 def inde():
@@ -33,9 +37,9 @@ def inde():
    return jsonify({"user_agent":user_agent,"ip":request.remote_addr})
 
 #passing a variable in the url
-@app.route("/<name>")
-def index(name):
-    return "Hello World! from {}".format(name)
+@app.route("/<string:name>/<string:name2>")
+def index(name,name2):
+    return f"{name,name2}"
 
 #passing a json object
 @app.route("/hello")
@@ -51,27 +55,7 @@ def index3():
     return redirect(url_for("index2"))
 
 
-@app.route("/qna")
-def generate_qna():
-    st=time.time()
-    nlp = pipeline("question-generation")
-
-
-    model = T5ForConditionalGeneration.from_pretrained('ramsrigouthamg/t5_paraphraser')
-    tokenizer = T5Tokenizer.from_pretrained('t5-base')
-    device = torch.device("cpu")
-    model = model.to(device) 
-
-
-    file = open("ip.txt","r")
-    str_input_txt = file.read()
-    print("generating qna pair.....")
-    q_lst = nlp(str_input_txt) 
-    print("qna pair generated")
-    print(q_lst)
-    et=time.time()
-    return jsonify({"time":et-st,"qna":q_lst})
-
+ 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="192.168.1.3")
+    app.run(debug=True, host="192.168.1.3", port=5000)
