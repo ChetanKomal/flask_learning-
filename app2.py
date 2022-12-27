@@ -28,9 +28,11 @@ from dotenv import load_dotenv
 import requests
 load_dotenv()
 
+
 global_path = "C:\\Users\\Hp\\Desktop\\flask learning\\"
 project_name = ""
-guid= ""
+guid = ""
+
 
 max_len = 500
 
@@ -57,20 +59,31 @@ class get_guid_project(Resource):
     def __init__(self):
         self.__project_name = parser.parse_args().get('project_name',None)
         self.__guid = parser.parse_args().get('guid',None)
-    def get(self): 
+    def get(self):
+        global  project_name
+        global guid 
         project_name = self.__project_name
         guid = self.__guid
         return f"{project_name} {guid}"
 
+
 api.add_resource(get_guid_project,"/get_name_id/")
+
 
 #reading blob 
 def read_blob(project_name,guid):
     url = f"https://qnai.blob.core.windows.net/{project_name}/{guid}/2.pdf"
     response = requests.get(url)
-    open("2.pdf", "wb").write(response.content)
-    
-    
+    open(f"{guid}.pdf", "wb").write(response.content)
+
+
+#function for range of pages to read from pdf file.    
+def page_range():
+    request_url = urllib.request.urlopen(f"https://qnai.blob.core.windows.net/{project_name}/{guid}/from_to.txt")
+    values = request_url.read().decode('utf-8')
+    a = int(values.split(" ")[0])
+    b = int(values.split(" ")[1])
+    return a,b  
 
 #uploading output to Blob storage
 def upload_blob(file_path , file_name):
@@ -123,11 +136,8 @@ def pphrase(q_lst):
     f1.close()
 
 #function for reading the pdf file and extracting text from it page by page.
-def read_page():
-    request_url = urllib.request.urlopen(f"https://qnai.blob.core.windows.net/{project_name}/{guid}/from_to.txt")
-    values = request_url.read().decode('utf-8')
-    a,b = values.split(" ")[0],values.split(" ")[1]
-    reader = PdfReader("2_cropped.pdf")
+def read_page(a,b):
+    reader = PdfReader(f"{guid}_cropped.pdf")
     pdf_txt_object = open("ip.txt", "a")
     for i in range(a,b):
      page = reader.pages[i]
@@ -137,10 +147,10 @@ def read_page():
 
 #main function for qna generation
 def gen_qna():
-  read_blob(project_name,guid)
+  
   print(threading.current_thread().name, 'Starting')
   #croping pdf pages
-  crop(["-u", "-p", "10.0", "-m4", "0", "2", "0", "3","-prw","1.0","1.0","1.0","1.0", "-ap4", "52.0", "30.0", "50.0", "62.0"  ,"2.pdf"])
+  crop(["-u", "-p", "10.0", "-m4", "0", "2", "0", "3","-prw","1.0","1.0","1.0","1.0", "-ap4", "52.0", "30.0", "50.0", "62.0"  ,f"{guid}.pdf"])
   print("cropping successfull")
 
   #checking the files if they are empty or contain data from previous run.
@@ -150,7 +160,7 @@ def gen_qna():
   open(f"{global_path}output.csv","w").close()
   open(f"{global_path}output_without_paraphrasing.csv","w").close()
 
-  read_page()
+  read_page(page_range()[0],page_range()[1])
   
   read_txt = open("ip.txt", "r")
   content = read_txt.read()
@@ -158,8 +168,8 @@ def gen_qna():
   ai_blank = blankline_tokenize(content)
   ai_blank_copy = ai_blank
 
-  try:
-   for i in range(len(ai_blank_copy)):
+  
+  for i in range(0,len(ai_blank_copy)-2):
      x = ai_blank_copy[i]
      while len(x) < 500:
        if len(x) < 500:
@@ -167,7 +177,7 @@ def gen_qna():
          x = x + " " + ai_blank_copy[i]
        else:
          break
-
+     
      str_input_txt = x
      print("generating qna pair.....")
      q_lst = nlp(str_input_txt)
@@ -186,22 +196,27 @@ def gen_qna():
 
 
      print("<================================================================>")
-     upload_blob(f"{global_path}output.csv","guid_1/output.csv")
-     upload_blob(f"{global_path}output_without_paraphrasing.csv","guid_1/output_without_paraphrasing.csv")
-     upload_blob(f"{global_path}ip.txt","guid_1/from_to.txt")
-     os.remove("2_cropped.pdf")
-     os.remove("2.pdf")
-  except:
-      print("Done")
-  return jsonify(q_lst)    
+  upload_blob(f"{global_path}output.csv",f"{guid}/output.csv")
+  upload_blob(f"{global_path}output_without_paraphrasing.csv",f"{guid}/output_without_paraphrasing.csv")
+  upload_blob(f"{global_path}ip.txt",f"{guid}/ip.txt")
+  os.remove(f"{guid}_cropped.pdf")
+  os.remove(f"{guid}.pdf")
+  open(f"{global_path}output.csv","w").close()
+  open(f"{global_path}output_without_paraphrasing.csv","w").close()
+     
 
 @app.route("/")
 def home():
-    return "python api page."
+    return f"{project_name} {guid}"
 
 @app.route("/qna")
 def index():
-     threading.Thread(target=gen_qna).start()
+    with app.app_context():
+     if len(project_name) == 0 and len(guid) == 0:
+        return "project_name and guid not found , maybe call \"/get_name_id/?project_name=project_name&guid=guid\" this url first "   
+     else:
+      read_blob(project_name,guid)
+      threading.Thread(target=gen_qna).start()
      return "ALL STEPS DONE"    
 
 @app.route("/info")
