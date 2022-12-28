@@ -20,7 +20,6 @@ from transformers import T5ForConditionalGeneration,T5Tokenizer
 import pandas as pd
 from openpyxl import load_workbook
 from pipelines import pipeline
-import table_upload
 from pdfCropMargins import crop
 import threading
 import wget
