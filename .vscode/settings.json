@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/3eb704db-c978-4b0e-8ca1-00f48fb7c962/AppServices/subscriptions/3eb704db-c978-4b0e-8ca1-00f48fb7c962/resourceGroups/wnsitdevVilas/providers/Microsoft.Web/sites/flaskhosting",
+    "appService.deploySubpath": "."
+}

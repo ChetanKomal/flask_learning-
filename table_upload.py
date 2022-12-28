@@ -3,14 +3,13 @@ import pandas as pd
 import os
 from dotenv import load_dotenv
 from azure.data.tables import TableServiceClient
-from guid_generator import *
 
 def configure():
     load_dotenv()
 
 
 def table_storage_upload(tb_name):
- connection_string = os.getenv('connection_string') 
+ connection_string = os.getenv('CONN_STR') 
  table_service_client = TableServiceClient.from_connection_string(conn_str=connection_string)
  table_client = table_service_client.create_table(table_name=tb_name)
  table_client = table_service_client.get_table_client(table_name=tb_name)
@@ -29,9 +28,6 @@ def table_storage_upload(tb_name):
 
  #iterate through each row in the csv file and uploading to table storage.
  for row in csvreader:
-    #skipping out Ist row as it is header.
-    if row[0] == 'question':
-        continue
     counter += 1    
     my_entity['RowKey'] = str(counter)
     my_entity['question'] = row[0]
@@ -42,9 +38,9 @@ def table_storage_upload(tb_name):
  f.close()
 
 
-def main():
+def main(guid):
  configure()
- tb_name = generate_guid()
+ tb_name = guid
  table_storage_upload(tb_name)
- with open('guid_generated.txt','w') as x: x.write(tb_name)
+ #with open('guid_generated.txt','w') as x: x.write(tb_name)
  return "upload completed with GUID:" + str(tb_name)
